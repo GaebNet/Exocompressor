@@ -17,6 +17,14 @@ export interface ImageData {
     targetSizeMB?: number;
     compressionMode: 'quality' | 'fileSize';
   };
+  compressionSettingsUsed?: {
+    quality: number;
+    format: 'original' | 'jpeg' | 'png' | 'webp';
+    maxWidth?: number;
+    maxHeight?: number;
+    targetSizeMB?: number;
+    compressionMode: 'quality' | 'fileSize';
+  };
 }
 
 export interface CompressionSettings {

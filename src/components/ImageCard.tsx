@@ -16,6 +16,13 @@ interface ImageCardProps {
 const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMode }) => {
   const [compressing, setCompressing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+
+  const hasSettingsChanged = useCallback(() => {
+    if (!image.compressed || !image.compressionSettingsUsed) return false;
+    
+    return JSON.stringify(image.settings) !== JSON.stringify(image.compressionSettingsUsed);
+  }, [image.settings, image.compressed, image.compressionSettingsUsed]);
 
   const compressImage = useCallback(async () => {
     if (compressing) return;
@@ -39,7 +46,7 @@ const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMo
           maxSizeMB: 1,
           maxWidthOrHeight: image.settings.maxWidth || 1920,
           useWebWorker: true,
-          quality: image.settings.quality / 100,
+          initialQuality: image.settings.quality / 100,
         };
       }
 
@@ -56,6 +63,7 @@ const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMo
           originalSize: image.file.size,
           compressedSize: compressedFile.size,
         },
+        compressionSettingsUsed: { ...image.settings },
       });
 
       const targetText = image.settings.compressionMode === 'fileSize' 
@@ -113,13 +121,29 @@ const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMo
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg">
       {/* Image Preview */}
-      <div className="relative aspect-square bg-gray-100 dark:bg-gray-700">
+      <div 
+        className="relative aspect-square bg-gray-100 dark:bg-gray-700"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
         <img
-          src={image.compressed?.preview || image.preview}
+          src={image.compressed && isHovering ? image.preview : (image.compressed?.preview || image.preview)}
           alt={image.file.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-opacity duration-200"
           loading="lazy"
         />
+        
+        {/* Hover indicator */}
+        {image.compressed && isHovering && (
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-70 text-white text-xs rounded">
+            Original
+          </div>
+        )}
+        {image.compressed && !isHovering && (
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-600 text-white text-xs rounded">
+            Compressed
+          </div>
+        )}
         
         {/* Overlay actions */}
         <div className="absolute top-2 right-2 flex space-x-2">
@@ -238,7 +262,7 @@ const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMo
                 onChange={(e) => onUpdate({
                   settings: {
                     ...image.settings,
-                    format: e.target.value as any,
+                    format: e.target.value as 'original' | 'jpeg' | 'png' | 'webp',
                   },
                 })}
                 className="w-full px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -309,12 +333,34 @@ const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMo
             </button>
           ) : (
             <>
+              {hasSettingsChanged() ? (
+                <button
+                  onClick={compressImage}
+                  disabled={compressing}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition-colors"
+                >
+                  {compressing ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <Zap className="w-4 h-4 mr-2" />
+                  )}
+                  {compressing ? 'Recompressing...' : 'Recompress'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleDownload('compressed')}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </button>
+              )}
               <button
-                onClick={() => handleDownload('compressed')}
-                className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                onClick={() => setShowSettings(!showSettings)}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                title="Adjust compression settings"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Download
+                <Settings className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDownload('original')}
