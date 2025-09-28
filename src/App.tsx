@@ -6,13 +6,14 @@ import ImageUploader from './components/ImageUploader';
 import ImageProcessor from './components/ImageProcessor';
 import VideoCompressor from './components/VideoCompressor';
 import PdfCompressor from './components/PdfCompressor';
-import TabSelector from './components/TabSelector';
+import AudioCompressor from './components/AudioCompressor';
+import MobileBottomNav from './components/MobileBottomNav';
 import { ImageData } from './types';
 import logo from "./images/logo.png";
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'image' | 'video' | 'pdf'>('image');
+  const [activeTab, setActiveTab] = useState<'image' | 'video' | 'pdf' | 'audio'>('image');
   const [images, setImages] = useState<ImageData[]>([]);
 
   useEffect(() => {
@@ -151,27 +152,34 @@ const App = () => {
                     </div>
                   </div>
                 </button>
-              </div>
 
-              {/* Coming soon section (only Audio Compression now) */}
-              <div className="mt-8 px-4">
-                <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
-                  Coming Soon
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3 px-4 py-3 rounded-xl opacity-50 cursor-not-allowed">
-                    <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-                      <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                {/* Audio Compression Tab */}
+                <button
+                  onClick={() => setActiveTab('audio')}
+                  className={`
+                    w-full px-4 py-3 flex items-center text-left rounded-xl
+                    transition-all duration-300 transform
+                    ${
+                      activeTab === 'audio'
+                        ? 'bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-lg scale-102'
+                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 hover:scale-102'
+                    }
+                  `}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${activeTab === 'audio' ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'audio' ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                       </svg>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium text-gray-400 dark:text-gray-500">Audio Compression</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
+                      <span className="font-medium">Audio Compression</span>
+                      <span className={`text-xs ${activeTab === 'audio' ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                        Optimize audio files
+                      </span>
                     </div>
                   </div>
-                </div>
+                </button>
               </div>
             </nav>
 
@@ -179,7 +187,7 @@ const App = () => {
 
           <div className="flex-1">
             <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-            <main className="container px-4 py-8">
+            <main className="container px-4 py-8 pb-24 lg:pb-8">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-8 sm:mb-12 px-4 sm:px-0">
                   <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
@@ -192,7 +200,7 @@ const App = () => {
                 
 
                 <div className="block lg:hidden">
-                  <TabSelector activeTab={activeTab} onTabChange={setActiveTab} />
+                  <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} />
                 </div>
 
                 <div className="mb-8">
@@ -200,6 +208,8 @@ const App = () => {
                     <VideoCompressor />
                   ) : activeTab === 'pdf' ? (
                     <PdfCompressor />
+                  ) : activeTab === 'audio' ? (
+                    <AudioCompressor />
                   ) : (
                     images.length === 0 ? (
                       <ImageUploader onImagesUploaded={handleImagesUploaded} darkMode={darkMode} />
@@ -229,6 +239,7 @@ const App = () => {
           </a>
         </footer>
       </div>
+      <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       <Toaster position="top-right" />
     </>
   );
