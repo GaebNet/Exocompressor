@@ -1,16 +1,18 @@
+
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ImageProcessor from './components/ImageProcessor';
 import VideoCompressor from './components/VideoCompressor';
+import PdfCompressor from './components/PdfCompressor';
 import TabSelector from './components/TabSelector';
 import { ImageData } from './types';
 import logo from "./images/logo.png";
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'image' | 'video'>('image');
+  const [activeTab, setActiveTab] = useState<'image' | 'video' | 'pdf'>('image');
   const [images, setImages] = useState<ImageData[]>([]);
 
   useEffect(() => {
@@ -61,6 +63,8 @@ const App = () => {
             </div>
             <nav className="flex-1 py-6 px-3">
               <div className="space-y-3">
+
+                {/* Image Compression Tab */}
                 <button
                   onClick={() => setActiveTab('image')}
                   className={`
@@ -90,6 +94,7 @@ const App = () => {
                   </div>
                 </button>
 
+                {/* Video Compression Tab */}
                 <button
                   onClick={() => setActiveTab('video')}
                   className={`
@@ -118,9 +123,37 @@ const App = () => {
                     </div>
                   </div>
                 </button>
+
+                {/* PDF Compression Tab */}
+                <button
+                  onClick={() => setActiveTab('pdf')}
+                  className={`
+                    w-full px-4 py-3 flex items-center text-left rounded-xl
+                    transition-all duration-300 transform
+                    ${
+                      activeTab === 'pdf'
+                        ? 'bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-lg scale-102'
+                        : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 hover:scale-102'
+                    }
+                  `}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${activeTab === 'pdf' ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                      <svg className={`w-5 h-5 ${activeTab === 'pdf' ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">PDF Compression</span>
+                      <span className={`text-xs ${activeTab === 'pdf' ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                        Shrink PDF file size
+                      </span>
+                    </div>
+                  </div>
+                </button>
               </div>
 
-              {/* Coming soon section */}
+              {/* Coming soon section (only Audio Compression now) */}
               <div className="mt-8 px-4">
                 <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
                   Coming Soon
@@ -135,19 +168,6 @@ const App = () => {
                     </div>
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-400 dark:text-gray-500">Audio Compression</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3 px-4 py-3 rounded-xl opacity-50 cursor-not-allowed">
-                    <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-                      <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-400 dark:text-gray-500">PDF Compression</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500">Coming soon...</span>
                     </div>
                   </div>
@@ -170,6 +190,7 @@ const App = () => {
                   </p>
                 </div>
                 
+
                 <div className="block lg:hidden">
                   <TabSelector activeTab={activeTab} onTabChange={setActiveTab} />
                 </div>
@@ -177,6 +198,8 @@ const App = () => {
                 <div className="mb-8">
                   {activeTab === 'video' ? (
                     <VideoCompressor />
+                  ) : activeTab === 'pdf' ? (
+                    <PdfCompressor />
                   ) : (
                     images.length === 0 ? (
                       <ImageUploader onImagesUploaded={handleImagesUploaded} darkMode={darkMode} />
