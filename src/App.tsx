@@ -155,20 +155,6 @@ const App = () => {
               </div>
             </nav>
 
-            {/* Pro features section */}
-            <div className="p-4">
-              <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-teal-500/10 dark:from-blue-600/20 dark:to-teal-600/20">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  Pro Features
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  Unlock advanced compression features.
-                </p>
-                <button className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-102 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
-                  Coming Soon
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="flex-1">

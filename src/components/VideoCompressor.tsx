@@ -7,7 +7,10 @@ import ProgressBar from './ProgressBar';
 const VideoCompressor = () => {
   const [video, setVideo] = useState<File | null>(null);
   const [compressedVideo, setCompressedVideo] = useState<string | null>(null);
+  const [originalSize, setOriginalSize] = useState<number | null>(null);
+  const [compressedSize, setCompressedSize] = useState<number | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [removeAudio, setRemoveAudio] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -43,6 +46,8 @@ const VideoCompressor = () => {
       setVideo(file);
       setCompressedVideo(null);
       setCompressionProgress(0);
+      setOriginalSize(file.size);
+      setCompressedSize(null);
       toast.success('Video selected successfully');
     } else {
       toast.error('Please select a valid video file');
@@ -51,7 +56,6 @@ const VideoCompressor = () => {
 
   const handleCompression = async () => {
     if (!video) return;
-    
     setIsCompressing(true);
     setCompressionProgress(0);
     try {
@@ -65,7 +69,6 @@ const VideoCompressor = () => {
         currentStep++;
         const progress = Math.min(95, (currentStep / steps) * 100);
         setCompressionProgress(progress);
-        
         if (currentStep >= steps) {
           clearInterval(progressInterval);
         }
@@ -73,11 +76,15 @@ const VideoCompressor = () => {
 
       // Simulate video compression (replace with actual compression logic)
       await new Promise(resolve => setTimeout(resolve, duration));
-      
+
+      // Simulate compressed size (e.g., 40% smaller, or 55% if audio removed)
+      let simulatedCompressedSize = video.size * (removeAudio ? 0.45 : 0.6);
+      setCompressedSize(simulatedCompressedSize);
+
       const url = URL.createObjectURL(video);
       setCompressedVideo(url);
       setCompressionProgress(100);
-      toast.success('Video compressed successfully!');
+      toast.success(`Video compressed${removeAudio ? ' (audio removed)' : ''} successfully!`);
     } catch (error) {
       toast.error('Error compressing video');
       console.error(error);
@@ -156,6 +163,18 @@ const VideoCompressor = () => {
 
       {video && !isCompressing && (
         <div className="space-y-4 animate-slide-up">
+          <div className="flex items-center mb-2">
+            <input
+              id="remove-audio"
+              type="checkbox"
+              checked={removeAudio}
+              onChange={e => setRemoveAudio(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 mr-2"
+            />
+            <label htmlFor="remove-audio" className="text-sm text-gray-700 dark:text-gray-200 select-none cursor-pointer">
+              Remove audio for more size reduction
+            </label>
+          </div>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 
             bg-gray-50 dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
             transition-all duration-300 transform hover:scale-102">
@@ -183,8 +202,14 @@ const VideoCompressor = () => {
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{video.name}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {(video.size / (1024 * 1024)).toFixed(2)} MB
+                  Original size: {originalSize !== null ? (originalSize >= 1024 * 1024 ? `${(originalSize / (1024 * 1024)).toFixed(2)} MB` : `${(originalSize / 1024).toFixed(2)} KB`) : '-'}
                 </p>
+                {compressedSize && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    Compressed size: {compressedSize >= 1024 * 1024 ? `${(compressedSize / (1024 * 1024)).toFixed(2)} MB` : `${(compressedSize / 1024).toFixed(2)} KB`}<br />
+                    Reduced by: {originalSize && compressedSize ? (originalSize - compressedSize >= 1024 * 1024 ? `${((originalSize - compressedSize) / (1024 * 1024)).toFixed(2)} MB` : `${((originalSize - compressedSize) / 1024).toFixed(2)} KB`) : '-'}
+                  </p>
+                )}
               </div>
             </div>
             <button
