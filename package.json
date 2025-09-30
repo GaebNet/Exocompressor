@@ -1,8 +1,20 @@
 {
   "name": "exocompressor",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "A modern web application for professional image compression and optimization.",
+  "homepage": "https://github.com/PATILYASHH/Exocompressor#readme",
+  "bugs": {
+    "url": "https://github.com/PATILYASHH/Exocompressor/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PATILYASHH/Exocompressor.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
