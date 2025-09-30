@@ -42,9 +42,9 @@ const Header: React.FC<HeaderProps> = ({ darkMode, toggleDarkMode }) => {
               href="https://github.com/GaebNet"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="GeabNet Org GitHub"
+              aria-label="GaebNet Org GitHub"
             >
-              <img src={logo} alt="GeabNet Org Logo" className="h-8 w-8 rounded-full border" />
+              <img src={logo} alt="GaebNet Org Logo" className="h-8 w-8 rounded-full border" />
             </a>
             <button
               onClick={toggleDarkMode}
