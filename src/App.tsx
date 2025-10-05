@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
@@ -212,7 +211,7 @@ const App = () => {
                     <AudioCompressor />
                   ) : (
                     images.length === 0 ? (
-                      <ImageUploader onImagesUploaded={handleImagesUploaded} darkMode={darkMode} />
+                      <ImageUploader onImagesUploaded={handleImagesUploaded} />
                     ) : (
                       <ImageProcessor
                         images={images}

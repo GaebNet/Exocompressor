@@ -6,10 +6,9 @@ import { ImageData } from '../types';
 
 interface ImageUploaderProps {
   onImagesUploaded: (images: ImageData[]) => void;
-  darkMode: boolean;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImagesUploaded, darkMode }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImagesUploaded }) => {
   const [uploading, setUploading] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
