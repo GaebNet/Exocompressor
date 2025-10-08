@@ -27,6 +27,9 @@ const VideoCompressor = () => {
   const [removeAudio, setRemoveAudio] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0);
   const [selectedQuality, setSelectedQuality] = useState('max');
+  const [compressionMode, setCompressionMode] = useState<'quality' | 'size'>('quality');
+  const [targetSize, setTargetSize] = useState<number>(10); // Target size in MB
+  const [targetSizeUnit, setTargetSizeUnit] = useState<'MB' | 'KB'>('MB');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -80,54 +83,258 @@ const VideoCompressor = () => {
 
   const handleCompression = async () => {
     if (!video) return;
+    
+    // Check browser support
+    if (!window.MediaRecorder) {
+      toast.error('Video compression not supported in this browser');
+      return;
+    }
+
+    // Validate target size for size-based compression
+    if (compressionMode === 'size') {
+      const targetSizeBytes = targetSizeUnit === 'MB' ? targetSize * 1024 * 1024 : targetSize * 1024;
+      if (targetSizeBytes >= video.size) {
+        toast.error('Target size must be smaller than the original file size');
+        return;
+      }
+      if (targetSizeBytes < 50000) { // 50KB minimum
+        toast.error('Target size is too small. Minimum size is 50KB');
+        return;
+      }
+    }
+    
     setIsCompressing(true);
     setCompressionProgress(0);
+    
     try {
-      // Simulate compression progress
-      const duration = 3000; // 3 seconds
-      const interval = 100;
-      const steps = duration / interval;
-      let currentStep = 0;
+      // Real video compression using MediaRecorder API
+      setCompressionProgress(10);
+      
+      // Create video element
+      const videoElement = document.createElement('video');
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      
+      // Load video
+      await new Promise((resolve, reject) => {
+        videoElement.onloadedmetadata = resolve;
+        videoElement.onerror = reject;
+        videoElement.src = URL.createObjectURL(video);
+      });
 
-      const progressInterval = setInterval(() => {
-        currentStep++;
-        const progress = Math.min(95, (currentStep / steps) * 100);
-        setCompressionProgress(progress);
-        if (currentStep >= steps) {
-          clearInterval(progressInterval);
+      setCompressionProgress(20);
+
+      // Set up canvas for video processing
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error('Canvas not supported');
+      }
+
+      // Calculate target dimensions based on compression mode
+      const originalWidth = videoElement.videoWidth;
+      const originalHeight = videoElement.videoHeight;
+      let scale: number;
+
+      if (compressionMode === 'size') {
+        // For size-based compression, estimate appropriate resolution
+        const targetSizeBytes = targetSizeUnit === 'MB' ? targetSize * 1024 * 1024 : targetSize * 1024;
+        const videoDuration = videoElement.duration;
+        
+        // Estimate scale based on target size (rough calculation)
+        const originalPixels = originalWidth * originalHeight;
+        const targetBitrate = (targetSizeBytes * 8) / videoDuration;
+        const estimatedScale = Math.sqrt(Math.min(1.0, targetBitrate / (originalPixels * 0.1)));
+        
+        scale = Math.max(0.2, Math.min(1.0, estimatedScale)); // Between 20% and 100%
+      } else {
+        // Quality-based scaling (original logic)
+        const qualityScales: { [key: string]: number } = {
+          '144': 144 / originalHeight,
+          '240': 240 / originalHeight,
+          '360': 360 / originalHeight,
+          '480': 480 / originalHeight,
+          '720': 720 / originalHeight,
+          '1080': 1080 / originalHeight,
+          '1440': 1440 / originalHeight,
+          '2160': 2160 / originalHeight,
+          'max': 1.0
+        };
+
+        scale = Math.min(1.0, qualityScales[selectedQuality] || 1.0);
+      }
+
+      canvas.width = Math.floor(originalWidth * scale);
+      canvas.height = Math.floor(originalHeight * scale);
+
+      setCompressionProgress(30);
+
+      // Set compression bitrate based on mode (quality or size)
+      const pixelCount = canvas.width * canvas.height;
+      let bitrate: number;
+
+      if (compressionMode === 'size') {
+        // Calculate bitrate based on target size
+        const targetSizeBytes = targetSizeUnit === 'MB' ? targetSize * 1024 * 1024 : targetSize * 1024;
+        const videoDuration = videoElement.duration;
+        
+        // Reserve space for audio if not removing it (approximately 10-20% of target size)
+        const videoSizeRatio = removeAudio ? 0.95 : 0.8;
+        const targetVideoBitrate = Math.floor((targetSizeBytes * videoSizeRatio * 8) / videoDuration);
+        
+        bitrate = Math.max(50000, Math.min(targetVideoBitrate, pixelCount * 0.15)); // Cap at reasonable max
+      } else {
+        // Quality-based compression (original logic)
+        const qualityBitrates: { [key: string]: number } = {
+          '144': Math.floor(pixelCount * 0.02),  // Very low bitrate
+          '240': Math.floor(pixelCount * 0.03),  // Low bitrate
+          '360': Math.floor(pixelCount * 0.04),  // Medium-low bitrate
+          '480': Math.floor(pixelCount * 0.05),  // Medium bitrate
+          '720': Math.floor(pixelCount * 0.06),  // Medium-high bitrate
+          '1080': Math.floor(pixelCount * 0.07), // High bitrate
+          '1440': Math.floor(pixelCount * 0.08), // Very high bitrate
+          '2160': Math.floor(pixelCount * 0.09), // Ultra high bitrate
+          'max': Math.floor(pixelCount * 0.1)    // Maximum bitrate
+        };
+
+        bitrate = Math.max(50000, qualityBitrates[selectedQuality] || Math.floor(pixelCount * 0.06));
+      }
+
+      // Create media stream from canvas
+      const stream = canvas.captureStream(25); // 25 fps for better compression
+      
+      // Add audio if not removing it
+      if (!removeAudio) {
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioContext.createMediaElementSource(videoElement);
+          const dest = audioContext.createMediaStreamDestination();
+          source.connect(dest);
+          
+          dest.stream.getAudioTracks().forEach(track => {
+            stream.addTrack(track);
+          });
+        } catch (err) {
+          console.warn('Could not process audio:', err);
         }
-      }, interval);
+      }
 
-      // Simulate video compression (replace with actual compression logic)
-      await new Promise(resolve => setTimeout(resolve, duration));
+      // Set up MediaRecorder with optimized settings
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
+        ? 'video/webm;codecs=vp9'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+        ? 'video/webm;codecs=vp8'
+        : 'video/webm';
 
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: bitrate
+      });
 
-      // Simulate compressed size based on quality and audio removal
-      // Lower quality = smaller file. These are rough multipliers for demo purposes.
-      const qualityMultipliers: { [key: string]: number } = {
-        '144': 0.15,
-        '240': 0.22,
-        '360': 0.32,
-        '480': 0.45,
-        '720': 0.6,
-        '1080': 0.75,
-        '1440': 0.85,
-        '2160': 0.95,
-        'max': 1.0,
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
       };
-      let multiplier = qualityMultipliers[selectedQuality] ?? 1.0;
-      // Remove audio gives extra reduction
-      if (removeAudio) multiplier *= 0.75;
-      let simulatedCompressedSize = video.size * multiplier;
-      setCompressedSize(simulatedCompressedSize);
 
-      const url = URL.createObjectURL(video);
-      setCompressedVideo(url);
+      setCompressionProgress(40);
+
+      // Start recording and play video
+      mediaRecorder.start();
+      videoElement.play();
+
+      const duration = videoElement.duration;
+      let lastTime = 0;
+
+      // Update progress and draw frames
+      const updateProgress = () => {
+        if (!videoElement.paused && !videoElement.ended) {
+          const currentTime = videoElement.currentTime;
+          
+          // Only redraw if time has changed significantly
+          if (currentTime - lastTime > 0.04) { // ~25fps
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            lastTime = currentTime;
+          }
+          
+          const progress = 40 + (currentTime / duration) * 50;
+          setCompressionProgress(Math.min(90, progress));
+          
+          requestAnimationFrame(updateProgress);
+        }
+      };
+
+      updateProgress();
+
+      // Wait for video to finish with timeout
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          mediaRecorder.stop();
+          reject(new Error('Compression timed out'));
+        }, Math.max(30000, duration * 1000 + 10000)); // At least 30s, or video duration + 10s
+
+        videoElement.onended = () => {
+          clearTimeout(timeout);
+          mediaRecorder.stop();
+          resolve();
+        };
+
+        videoElement.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('Video playback failed'));
+        };
+      });
+
+      setCompressionProgress(95);
+
+      // Get compressed video blob
+      const compressedBlob = await new Promise<Blob>((resolve) => {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          resolve(blob);
+        };
+      });
+
+      // Create URL for the compressed video
+      const compressedUrl = URL.createObjectURL(compressedBlob);
+      setCompressedVideo(compressedUrl);
+      setCompressedSize(compressedBlob.size);
+
+      // Cleanup
+      URL.revokeObjectURL(videoElement.src);
       setCompressionProgress(100);
-      toast.success(`Video compressed${removeAudio ? ' (audio removed)' : ''} successfully!`);
+      
+      // Show compression statistics
+      const compressionRatio = ((video.size - compressedBlob.size) / video.size * 100).toFixed(1);
+      const actualSizeMB = (compressedBlob.size / (1024 * 1024)).toFixed(2);
+      
+      let successMessage: string;
+      if (compressionMode === 'size') {
+        const targetSizeMB = targetSizeUnit === 'MB' ? targetSize : targetSize / 1024;
+        successMessage = `Video compressed to ${actualSizeMB} MB (target: ${targetSizeMB.toFixed(2)} MB)${removeAudio ? ' - audio removed' : ''}`;
+      } else {
+        successMessage = `Video compressed successfully! Size reduced by ${compressionRatio}%${removeAudio ? ' (audio removed)' : ''}`;
+      }
+      
+      toast.success(successMessage);
     } catch (error) {
-      toast.error('Error compressing video');
-      console.error(error);
+      console.error('Video compression error:', error);
+      
+      let errorMessage = 'Failed to compress video';
+      if (error instanceof Error) {
+        if (error.message.includes('Canvas not supported')) {
+          errorMessage = 'Video compression not supported in this browser';
+        } else if (error.message.includes('MediaRecorder')) {
+          errorMessage = 'Video recording not supported in this browser';
+        } else if (error.message.includes('codec')) {
+          errorMessage = 'Video format not supported for compression';
+        }
+      }
+      
+      toast.error(errorMessage);
+      setCompressionProgress(0);
     } finally {
       setIsCompressing(false);
     }
@@ -212,6 +419,34 @@ const VideoCompressor = () => {
 
       {video && !isCompressing && (
         <div className="space-y-6 animate-slide-up">
+          {/* Compression Mode Toggle */}
+          <div className="flex justify-center mb-6">
+            <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-xl shadow-inner">
+              <div className="flex">
+                <button
+                  onClick={() => setCompressionMode('quality')}
+                  className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                    compressionMode === 'quality'
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600'
+                  }`}
+                >
+                  By Quality
+                </button>
+                <button
+                  onClick={() => setCompressionMode('size')}
+                  className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                    compressionMode === 'size'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600'
+                  }`}
+                >
+                  By Size
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row items-center gap-6 mb-4">
             <div className="flex items-center bg-blue-100 dark:bg-blue-900/40 px-4 py-2 rounded-xl shadow border border-blue-300 dark:border-blue-700">
               <input
@@ -225,24 +460,57 @@ const VideoCompressor = () => {
                 Remove Audio
               </label>
             </div>
-            <div className="flex items-center bg-teal-100 dark:bg-teal-900/40 px-4 py-2 rounded-xl shadow border border-teal-300 dark:border-teal-700">
-              <label htmlFor="quality-select" className="text-base font-semibold text-teal-800 dark:text-teal-200 mr-3 select-none cursor-pointer">
-                Quality
-              </label>
-              <select
-                id="quality-select"
-                value={selectedQuality}
-                onChange={e => setSelectedQuality(e.target.value)}
-                className="form-select rounded-lg border-teal-400 focus:border-teal-600 focus:ring focus:ring-teal-200 focus:ring-opacity-50 text-base px-3 py-1.5 font-medium bg-white dark:bg-gray-900 text-teal-900 dark:text-teal-200"
-              >
-                {(videoHeight
-                  ? allQualityOptions.filter(opt => opt.height <= videoHeight || opt.value === 'max')
-                  : allQualityOptions
-                ).map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+
+            {/* Quality or Size Controls */}
+            {compressionMode === 'quality' ? (
+              <div className="flex items-center bg-teal-100 dark:bg-teal-900/40 px-4 py-2 rounded-xl shadow border border-teal-300 dark:border-teal-700">
+                <label htmlFor="quality-select" className="text-base font-semibold text-teal-800 dark:text-teal-200 mr-3 select-none cursor-pointer">
+                  Quality
+                </label>
+                <select
+                  id="quality-select"
+                  value={selectedQuality}
+                  onChange={e => setSelectedQuality(e.target.value)}
+                  className="form-select rounded-lg border-teal-400 focus:border-teal-600 focus:ring focus:ring-teal-200 focus:ring-opacity-50 text-base px-3 py-1.5 font-medium bg-white dark:bg-gray-900 text-teal-900 dark:text-teal-200"
+                >
+                  {(videoHeight
+                    ? allQualityOptions.filter(opt => opt.height <= videoHeight || opt.value === 'max')
+                    : allQualityOptions
+                  ).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-purple-100 dark:bg-purple-900/40 px-4 py-2 rounded-xl shadow border border-purple-300 dark:border-purple-700">
+                <label className="text-base font-semibold text-purple-800 dark:text-purple-200 select-none">
+                  Target Size:
+                </label>
+                <input
+                  type="number"
+                  min="0.1"
+                  max={targetSizeUnit === 'MB' ? 1000 : 1000000}
+                  step={targetSizeUnit === 'MB' ? 0.1 : 10}
+                  value={targetSize}
+                  onChange={e => {
+                    const value = Number(e.target.value);
+                    const maxSize = targetSizeUnit === 'MB' ? 1000 : 1000000;
+                    const minSize = targetSizeUnit === 'MB' ? 0.1 : 100;
+                    setTargetSize(Math.max(minSize, Math.min(maxSize, value)));
+                  }}
+                  className="w-20 px-2 py-1 rounded border border-purple-300 focus:border-purple-500 focus:ring focus:ring-purple-200 text-purple-900 dark:text-purple-200 bg-white dark:bg-gray-900"
+                  placeholder={targetSizeUnit === 'MB' ? '10.0' : '1000'}
+                />
+                <select
+                  value={targetSizeUnit}
+                  onChange={e => setTargetSizeUnit(e.target.value as 'MB' | 'KB')}
+                  className="px-2 py-1 rounded border border-purple-300 focus:border-purple-500 focus:ring focus:ring-purple-200 text-purple-900 dark:text-purple-200 bg-white dark:bg-gray-900"
+                >
+                  <option value="MB">MB</option>
+                  <option value="KB">KB</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-6 
             bg-gradient-to-br from-blue-50/80 via-white/80 to-teal-50/80 dark:from-gray-800/80 dark:via-gray-900/80 dark:to-gray-800/80
