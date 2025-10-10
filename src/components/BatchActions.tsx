@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, FileText, Archive, Zap } from 'lucide-react';
+import { FileText, Archive, Zap } from 'lucide-react';
 
 interface BatchActionsProps {
   onBatchCompress: (quality: number) => void;

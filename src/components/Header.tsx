@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, Download, Image as ImageIcon } from 'lucide-react';
+import { Moon, Sun, Image as ImageIcon } from 'lucide-react';
 import logo from '../images/logo.png';
 
 interface HeaderProps {
