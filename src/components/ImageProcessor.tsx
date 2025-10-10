@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, FileText, Archive } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ImageCard from './ImageCard';
 import BatchActions from './BatchActions';
 import { ImageData } from '../types';
@@ -23,7 +23,7 @@ const ImageProcessor: React.FC<ImageProcessorProps> = ({
 }) => {
   const [processing, setProcessing] = useState(false);
 
-  const handleBatchCompress = async (quality: number) => {
+  const handleBatchCompress = async () => {
     setProcessing(true);
     toast.promise(
       Promise.all(

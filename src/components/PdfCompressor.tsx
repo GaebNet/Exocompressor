@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText as PdfIcon, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { PDFDocument } from 'pdf-lib';
 
 const PdfCompressor = () => {
   const [pdf, setPdf] = useState<File | null>(null);
@@ -53,12 +54,13 @@ const PdfCompressor = () => {
     if (!pdf) return;
     setIsCompressing(true);
     try {
-      // Simulate compression
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // Simulate compressed size (e.g., 60% of original)
-      const simulatedCompressedSize = pdf.size * 0.6;
-      setCompressedSize(simulatedCompressedSize);
-      const url = URL.createObjectURL(pdf);
+      const existingPdfBytes = await pdf.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const compressedPdfBytes = await pdfDoc.save();
+      const compressedPdfBlob = new Blob([compressedPdfBytes], { type: 'application/pdf' });
+
+      setCompressedSize(compressedPdfBlob.size);
+      const url = URL.createObjectURL(compressedPdfBlob);
       setCompressedPdf(url);
       toast.success('PDF compressed successfully!');
     } catch (error) {

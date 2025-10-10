@@ -207,7 +207,10 @@ const VideoCompressor = () => {
       // Add audio if not removing it
       if (!removeAudio) {
         try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          type WindowWithAudioContext = Window & {
+            webkitAudioContext?: typeof AudioContext
+          };
+          const audioContext = new (window.AudioContext || (window as WindowWithAudioContext).webkitAudioContext)();
           const source = audioContext.createMediaElementSource(videoElement);
           const dest = audioContext.createMediaStreamDestination();
           source.connect(dest);

@@ -10,10 +10,9 @@ interface ImageCardProps {
   image: ImageData;
   onRemove: () => void;
   onUpdate: (updates: Partial<ImageData>) => void;
-  darkMode: boolean;
 }
 
-const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate, darkMode }) => {
+const ImageCard: React.FC<ImageCardProps> = ({ image, onRemove, onUpdate }) => {
   const [compressing, setCompressing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
