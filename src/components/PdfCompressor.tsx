@@ -9,6 +9,7 @@ const PdfCompressor = () => {
   const [originalSize, setOriginalSize] = useState<number | null>(null);
   const [compressedSize, setCompressedSize] = useState<number | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionLevel, setCompressionLevel] = useState('standard');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -56,7 +57,7 @@ const PdfCompressor = () => {
     try {
       const existingPdfBytes = await pdf.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      const compressedPdfBytes = await pdfDoc.save();
+      const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: compressionLevel === 'high' });
       const compressedPdfBlob = new Blob([compressedPdfBytes], { type: 'application/pdf' });
 
       setCompressedSize(compressedPdfBlob.size);
@@ -168,17 +169,46 @@ const PdfCompressor = () => {
                 )}
               </div>
             </div>
-            <button
-              onClick={handleCompression}
-              disabled={isCompressing}
-              className="w-full sm:w-auto px-8 py-3 text-base font-semibold text-white 
-                bg-gradient-to-r from-blue-600 via-teal-500 to-green-500 hover:from-blue-700 hover:to-teal-700
-                rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
-                disabled:opacity-50 transition-all duration-300 transform hover:scale-105 active:scale-95
-                shadow-xl hover:shadow-2xl border-2 border-transparent hover:border-blue-400"
-            >
-              Compress PDF
-            </button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-900 dark:text-white">Compression Level:</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="compressionLevel"
+                      value="standard"
+                      checked={compressionLevel === 'standard'}
+                      onChange={() => setCompressionLevel('standard')}
+                      className="form-radio h-4 w-4 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Standard</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="compressionLevel"
+                      value="high"
+                      checked={compressionLevel === 'high'}
+                      onChange={() => setCompressionLevel('high')}
+                      className="form-radio h-4 w-4 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">High</span>
+                  </label>
+                </div>
+              </div>
+              <button
+                onClick={handleCompression}
+                disabled={isCompressing}
+                className="w-full sm:w-auto px-8 py-3 text-base font-semibold text-white
+                  bg-gradient-to-r from-blue-600 via-teal-500 to-green-500 hover:from-blue-700 hover:to-teal-700
+                  rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+                  disabled:opacity-50 transition-all duration-300 transform hover:scale-105 active:scale-95
+                  shadow-xl hover:shadow-2xl border-2 border-transparent hover:border-blue-400"
+              >
+                Compress PDF
+              </button>
+            </div>
           </div>
 
           {compressedPdf && (
