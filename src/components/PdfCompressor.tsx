@@ -10,6 +10,7 @@ const PdfCompressor = () => {
   const [compressedSize, setCompressedSize] = useState<number | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionLevel, setCompressionLevel] = useState('standard');
+  const [scaleFactor, setScaleFactor] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -57,6 +58,14 @@ const PdfCompressor = () => {
     try {
       const existingPdfBytes = await pdf.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+      if (scaleFactor !== 1) {
+        const pages = pdfDoc.getPages();
+        pages.forEach(page => {
+          page.scale(scaleFactor);
+        });
+      }
+
       const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: compressionLevel === 'high' });
       const compressedPdfBlob = new Blob([compressedPdfBytes], { type: 'application/pdf' });
 
@@ -195,6 +204,25 @@ const PdfCompressor = () => {
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">High</span>
                   </label>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <label className="text-sm font-medium text-gray-900 dark:text-white">
+                  Resize: <span className="font-bold text-blue-600 dark:text-blue-400">{Math.round(scaleFactor * 100)}%</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setScaleFactor(prev => Math.max(0.1, prev - 0.1))} className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">-</button>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="2"
+                    step="0.01"
+                    value={scaleFactor}
+                    onChange={(e) => setScaleFactor(parseFloat(e.target.value))}
+                    className="w-36"
+                  />
+                  <button onClick={() => setScaleFactor(prev => Math.min(2, prev + 0.1))} className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">+</button>
+                  <button onClick={() => setScaleFactor(1)} className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md">Reset</button>
                 </div>
               </div>
               <button
