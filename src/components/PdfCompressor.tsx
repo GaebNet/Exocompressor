@@ -52,6 +52,15 @@ const PdfCompressor = () => {
     }
   };
 
+  const handleCompressionLevelChange = (level: string) => {
+    setCompressionLevel(level);
+    if (level === 'high') {
+      setScaleFactor(0.75);
+    } else {
+      setScaleFactor(1);
+    }
+  };
+
   const handleCompression = async () => {
     if (!pdf) return;
     setIsCompressing(true);
@@ -66,7 +75,7 @@ const PdfCompressor = () => {
         });
       }
 
-      const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: compressionLevel === 'high' });
+      const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: true });
       const compressedPdfBlob = new Blob([compressedPdfBytes], { type: 'application/pdf' });
 
       setCompressedSize(compressedPdfBlob.size);
@@ -188,7 +197,7 @@ const PdfCompressor = () => {
                       name="compressionLevel"
                       value="standard"
                       checked={compressionLevel === 'standard'}
-                      onChange={() => setCompressionLevel('standard')}
+                      onChange={() => handleCompressionLevelChange('standard')}
                       className="form-radio h-4 w-4 text-blue-600"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Standard</span>
@@ -199,7 +208,7 @@ const PdfCompressor = () => {
                       name="compressionLevel"
                       value="high"
                       checked={compressionLevel === 'high'}
-                      onChange={() => setCompressionLevel('high')}
+                      onChange={() => handleCompressionLevelChange('high')}
                       className="form-radio h-4 w-4 text-blue-600"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">High</span>
